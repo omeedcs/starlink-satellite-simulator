@@ -1,0 +1,196 @@
+
+> spacex-satellite-simulator@1.0.0 start
+> webpack serve --open
+
+<i> [webpack-dev-server] Project is running at:
+<i> [webpack-dev-server] Loopback: http://localhost:3001/
+<i> [webpack-dev-server] On Your Network (IPv4): http://192.168.1.93:3001/
+<i> [webpack-dev-server] On Your Network (IPv6): http://[fe80::1]:3001/
+<i> [webpack-dev-server] Content not from webpack is served from '/Users/omeedtehrani/SpaceX Presentation Day/satellite-simulator/dist, /Users/omeedtehrani/SpaceX Presentation Day/satellite-simulator/src/assets, /Users/omeedtehrani/SpaceX Presentation Day/satellite-simulator/public' directory
+<i> [webpack-dev-middleware] wait until bundle finished: /
+asset bundle.js 3.51 MiB [emitted] [big] (name: main)
+asset index.html 772 bytes [emitted]
+runtime modules 27.7 KiB 14 modules
+cacheable modules 3.14 MiB
+  modules by path ./node_modules/ 2.51 MiB 46 modules
+  modules by path ./src/ 647 KiB
+    modules by path ./src/visualization/*.ts 571 KiB 31 modules
+    modules by path ./src/components/*.tsx 19.3 KiB 4 modules
+    modules by path ./src/*.tsx 1.16 KiB 2 modules
+    modules by path ./src/*.css 4.87 KiB
+      ./src/App.css 2.23 KiB [built] [code generated]
+      ./node_modules/css-loader/dist/cjs.js!./src/App.css 2.64 KiB [built] [code generated]
+    modules by path ./src/models/*.ts 42.7 KiB
+      ./src/models/SatelliteNetwork.ts 36.5 KiB [built] [code generated]
+      ./src/models/GroundStationNetwork.ts 6.15 KiB [built] [code generated]
+    ./src/data/StarlinkGroundStations.ts 8.12 KiB [built] [code generated]
+webpack 5.99.5 compiled successfully in 3028 ms
+assets by status 772 bytes [cached] 1 asset
+assets by path *.js 3.53 MiB
+  asset bundle.js 3.51 MiB [emitted] [big] (name: main)
+  asset main.6848c63ee4334151d13f.hot-update.js 12.7 KiB [emitted] [immutable] [hmr] (name: main)
+asset main.6848c63ee4334151d13f.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+Entrypoint main [big] 3.53 MiB = bundle.js 3.51 MiB main.6848c63ee4334151d13f.hot-update.js 12.7 KiB
+cached modules 3.09 MiB [cached] 86 modules
+runtime modules 27.7 KiB 14 modules
+javascript modules 55 KiB
+  ./src/visualization/VisualizationEngine.ts 44.5 KiB [built] [code generated]
+  ./src/visualization/AtmosphericScatteringSystem.ts 10.5 KiB [built] [code generated]
+webpack 5.99.5 compiled successfully in 501 ms
+assets by status 772 bytes [cached] 1 asset
+assets by path *.js 3.53 MiB
+  asset bundle.js 3.51 MiB [emitted] [big] (name: main)
+  asset main.e5faf1452b04ee0fac34.hot-update.js 19.8 KiB [emitted] [immutable] [hmr] (name: main)
+asset main.e5faf1452b04ee0fac34.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+Entrypoint main [big] 3.53 MiB = bundle.js 3.51 MiB main.e5faf1452b04ee0fac34.hot-update.js 19.8 KiB
+cached modules 3.08 MiB [cached] 86 modules
+runtime modules 27.7 KiB 14 modules
+javascript modules 61.5 KiB
+  ./src/visualization/VisualizationEngine.ts 44.5 KiB [built] [code generated]
+  ./src/visualization/PhysicalSkySystem.ts 17 KiB [built] [code generated]
+webpack 5.99.5 compiled successfully in 271 ms
+assets by status 772 bytes [cached] 1 asset
+assets by path *.js 3.55 MiB
+  asset bundle.js 3.51 MiB [emitted] [big] (name: main)
+  asset main.cfe6e41297b0993a42ae.hot-update.js 33.3 KiB [emitted] [immutable] [hmr] (name: main)
+asset main.cfe6e41297b0993a42ae.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+Entrypoint main [big] 3.55 MiB = bundle.js 3.51 MiB main.cfe6e41297b0993a42ae.hot-update.js 33.3 KiB
+cached modules 3.09 MiB [cached] 86 modules
+runtime modules 27.7 KiB 14 modules
+javascript modules 56.9 KiB
+  ./src/visualization/EnhancedVisualizationIntegration.ts 27.8 KiB [built] [code generated]
+  ./src/visualization/DynamicAntennaSystem.ts 29.1 KiB [built] [code generated]
+webpack 5.99.5 compiled successfully in 386 ms
+assets by status 772 bytes [cached] 1 asset
+assets by path *.js 3.53 MiB
+  asset bundle.js 3.51 MiB [emitted] [big] (name: main)
+  asset main.ae1ddc4c65f3cbfc6066.hot-update.js 14.3 KiB [emitted] [immutable] [hmr] (name: main)
+asset main.ae1ddc4c65f3cbfc6066.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+Entrypoint main [big] 3.53 MiB = bundle.js 3.51 MiB main.ae1ddc4c65f3cbfc6066.hot-update.js 14.3 KiB
+cached modules 3.09 MiB [cached] 86 modules
+runtime modules 27.7 KiB 14 modules
+javascript modules 56.3 KiB
+  ./src/visualization/VisualizationEngine.ts 44.5 KiB [built] [code generated]
+  ./src/visualization/SimpleWalkableView.ts 11.8 KiB [built] [code generated]
+webpack 5.99.5 compiled successfully in 297 ms
+assets by status 772 bytes [cached] 1 asset
+assets by path *.js 3.53 MiB
+  asset bundle.js 3.51 MiB [emitted] [big] (name: main)
+  asset main.a80794f3351dbda2ccbe.hot-update.js 14.4 KiB [emitted] [immutable] [hmr] (name: main)
+asset main.a80794f3351dbda2ccbe.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+Entrypoint main [big] 3.53 MiB = bundle.js 3.51 MiB main.a80794f3351dbda2ccbe.hot-update.js 14.4 KiB
+cached modules 3.09 MiB [cached] 86 modules
+runtime modules 27.7 KiB 14 modules
+javascript modules 56.4 KiB
+  ./src/visualization/VisualizationEngine.ts 44.5 KiB [built] [code generated]
+  ./src/visualization/SimpleWalkableView.ts 12 KiB [built] [code generated]
+webpack 5.99.5 compiled successfully in 255 ms
+assets by status 772 bytes [cached] 1 asset
+assets by path *.js 3.53 MiB
+  asset bundle.js 3.51 MiB [emitted] [big] (name: main)
+  asset main.314bdce72fbfbe9f4b48.hot-update.js 14.7 KiB [emitted] [immutable] [hmr] (name: main)
+asset main.314bdce72fbfbe9f4b48.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+Entrypoint main [big] 3.53 MiB = bundle.js 3.51 MiB main.314bdce72fbfbe9f4b48.hot-update.js 14.7 KiB
+cached modules 3.09 MiB [cached] 86 modules
+runtime modules 27.7 KiB 14 modules
+javascript modules 56.7 KiB
+  ./src/visualization/VisualizationEngine.ts 44.5 KiB [built] [code generated]
+  ./src/visualization/SimpleWalkableView.ts 12.2 KiB [built] [code generated]
+webpack 5.99.5 compiled successfully in 202 ms
+assets by status 772 bytes [cached] 1 asset
+assets by path *.js 3.53 MiB
+  asset bundle.js 3.52 MiB [emitted] [big] (name: main)
+  asset main.459318141c39dadcb7d7.hot-update.js 15.5 KiB [emitted] [immutable] [hmr] (name: main)
+asset main.459318141c39dadcb7d7.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+Entrypoint main [big] 3.53 MiB = bundle.js 3.52 MiB main.459318141c39dadcb7d7.hot-update.js 15.5 KiB
+cached modules 3.09 MiB [cached] 86 modules
+runtime modules 27.7 KiB 14 modules
+javascript modules 57.5 KiB
+  ./src/visualization/VisualizationEngine.ts 44.5 KiB [built] [code generated]
+  ./src/visualization/SimpleWalkableView.ts 13.1 KiB [built] [code generated]
+webpack 5.99.5 compiled successfully in 305 ms
+assets by status 772 bytes [cached] 1 asset
+assets by path *.js 3.53 MiB
+  asset bundle.js 3.52 MiB [emitted] [big] (name: main)
+  asset main.cda3eb5eb144672a9d93.hot-update.js 13.4 KiB [emitted] [immutable] [hmr] (name: main)
+asset main.cda3eb5eb144672a9d93.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+Entrypoint main [big] 3.53 MiB = bundle.js 3.52 MiB main.cda3eb5eb144672a9d93.hot-update.js 13.4 KiB
+cached modules 3.11 MiB [cached] 86 modules
+runtime modules 27.7 KiB 14 modules
+javascript modules 28.4 KiB
+  ./src/visualization/EnhancedGroundStationView.ts 17.1 KiB [built] [code generated]
+  ./src/visualization/FirstPersonControls.ts 11.3 KiB [built] [code generated]
+webpack 5.99.5 compiled successfully in 222 ms
+assets by status 772 bytes [cached] 1 asset
+assets by path *.js 3.53 MiB
+  asset bundle.js 3.52 MiB [emitted] [big] (name: main)
+  asset main.a3f25f7940591cabcc1e.hot-update.js 13.9 KiB [emitted] [immutable] [hmr] (name: main)
+asset main.a3f25f7940591cabcc1e.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+Entrypoint main [big] 3.53 MiB = bundle.js 3.52 MiB main.a3f25f7940591cabcc1e.hot-update.js 13.9 KiB
+cached modules 3.11 MiB [cached] 86 modules
+runtime modules 27.7 KiB 14 modules
+javascript modules 28.9 KiB
+  ./src/visualization/EnhancedGroundStationView.ts 17.1 KiB [built] [code generated]
+  ./src/visualization/FirstPersonControls.ts 11.8 KiB [built] [code generated]
+webpack 5.99.5 compiled successfully in 255 ms
+assets by status 772 bytes [cached] 1 asset
+assets by path *.js 3.57 MiB
+  asset bundle.js 3.52 MiB [emitted] [big] (name: main)
+  asset main.bac4b3849e6ab2466656.hot-update.js 50.5 KiB [emitted] [immutable] [hmr] (name: main)
+asset main.bac4b3849e6ab2466656.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+Entrypoint main [big] 3.57 MiB = bundle.js 3.52 MiB main.bac4b3849e6ab2466656.hot-update.js 50.5 KiB
+cached modules 3.09 MiB [cached] 86 modules
+runtime modules 27.7 KiB 14 modules
+javascript modules 52.3 KiB
+  ./src/components/Simulation.tsx 7.81 KiB [built] [code generated]
+  ./src/visualization/VisualizationEngine.ts 44.5 KiB [built] [code generated]
+webpack 5.99.5 compiled successfully in 200 ms
+assets by status 772 bytes [cached] 1 asset
+assets by path *.js 3.57 MiB
+  asset bundle.js 3.52 MiB [emitted] [big] (name: main)
+  asset main.3deb64d5b73462d63e13.hot-update.js 50.6 KiB [emitted] [immutable] [hmr] (name: main)
+asset main.3deb64d5b73462d63e13.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+Entrypoint main [big] 3.57 MiB = bundle.js 3.52 MiB main.3deb64d5b73462d63e13.hot-update.js 50.6 KiB
+cached modules 3.09 MiB [cached] 86 modules
+runtime modules 27.7 KiB 14 modules
+javascript modules 52.4 KiB
+  ./src/components/Simulation.tsx 7.81 KiB [built] [code generated]
+  ./src/visualization/VisualizationEngine.ts 44.6 KiB [built] [code generated]
+webpack 5.99.5 compiled successfully in 203 ms
+assets by status 772 bytes [cached] 1 asset
+assets by path *.js 3.54 MiB
+  asset bundle.js 3.52 MiB [emitted] [big] (name: main)
+  asset main.fddcd7d272ef2d76def0.hot-update.js 20.1 KiB [emitted] [immutable] [hmr] (name: main)
+asset main.fddcd7d272ef2d76def0.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+Entrypoint main [big] 3.54 MiB = bundle.js 3.52 MiB main.fddcd7d272ef2d76def0.hot-update.js 20.1 KiB
+cached modules 3.08 MiB [cached] 86 modules
+runtime modules 27.7 KiB 14 modules
+javascript modules 61.6 KiB
+  ./src/visualization/VisualizationEngine.ts 44.6 KiB [built] [code generated]
+  ./src/visualization/EnhancedGroundStationView.ts 17.1 KiB [built] [code generated]
+webpack 5.99.5 compiled successfully in 257 ms
+assets by path *.js 3.52 MiB
+  asset bundle.js 3.52 MiB [emitted] [big] (name: main)
+  asset main.b720d8f026e12f08ed93.hot-update.js 869 bytes [emitted] [immutable] [hmr] (name: main)
+asset index.html 772 bytes [emitted]
+asset main.b720d8f026e12f08ed93.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+Entrypoint main [big] 3.52 MiB = bundle.js 3.52 MiB main.b720d8f026e12f08ed93.hot-update.js 869 bytes
+cached modules 3.14 MiB [cached] 88 modules
+runtime modules 27.7 KiB 14 modules
+webpack 5.99.5 compiled successfully in 84 ms
+assets by status 3.52 MiB [cached] 1 asset
+asset index.html 772 bytes [emitted]
+cached modules 3.14 MiB (javascript) 27.7 KiB (runtime) [cached] 102 modules
+webpack 5.99.5 compiled successfully in 65 ms
+assets by status 3.52 MiB [cached] 1 asset
+asset index.html 772 bytes [emitted]
+cached modules 3.14 MiB (javascript) 27.7 KiB (runtime) [cached] 102 modules
+webpack 5.99.5 compiled successfully in 54 ms
+assets by status 3.52 MiB [cached] 1 asset
+asset index.html 772 bytes [emitted]
+cached modules 3.14 MiB (javascript) 27.7 KiB (runtime) [cached] 102 modules
+webpack 5.99.5 compiled successfully in 55 ms
+assets by status 3.52 MiB [cached] 1 asset
+asset index.html 772 bytes [emitted]
+cached modules 3.14 MiB (javascript) 27.7 KiB (runtime) [cached] 102 modules
+webpack 5.99.5 compiled successfully in 24 ms

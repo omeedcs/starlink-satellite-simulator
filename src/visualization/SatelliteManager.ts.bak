@@ -1,0 +1,1244 @@
+import * as THREE from 'three';
+import { Satellite } from '../types/Satellite';
+import { Earth } from './Earth';
+import { DeniedRegion } from './DeniedRegion';
+import { DynamicRoutingController } from './DynamicRoutingController';
+
+export class SatelliteManager {
+  private object: THREE.Group;
+  private satellites: Map<string, Satellite> = new Map();
+  private satelliteMeshes: Map<string, THREE.Object3D> = new Map();
+  private connectionLines: Map<string, THREE.Line> = new Map();
+  private beamCones: Map<string, THREE.Group> = new Map(); // Store beam visualizations
+  private activeBeams: Map<string, number[]> = new Map();
+  // Performance mode flag - reduces detail for better performance
+  private performanceMode: boolean = true; // Default to performance mode
+  private visibilityDistance: number = 50000; // Increased maximum distance to render satellites
+  private activeBeamIndices: Map<string, number[]> = new Map(); // Track active beam indexes
+  private earth?: Earth;
+  private clock: THREE.Clock;
+  private groundStationPositions: Map<string, THREE.Vector3> = new Map();
+  
+  // Materials
+  private beamMaterial: THREE.MeshBasicMaterial;
+  private connectionMaterial: THREE.LineBasicMaterial;
+  
+  // Dynamic routing components
+  private deniedRegion?: DeniedRegion;
+  private routingController?: DynamicRoutingController;
+  private showDynamicRouting: boolean = false;
+  private activeDeniedRegions: string[] = [];
+  
+  constructor(initialSatellites?: Map<string, Satellite>) {
+    this.object = new THREE.Group();
+    this.satellites = new Map();
+    this.satelliteMeshes = new Map();
+    this.beamCones = new Map();
+    this.connectionLines = new Map();
+    this.groundStationPositions = new Map();
+    this.clock = new THREE.Clock();
+    
+    // Create materials with enhanced visibility
+    this.connectionMaterial = new THREE.LineBasicMaterial({
+      color: 0x00ffff,
+      transparent: true,
+      opacity: 0.8, // Increased opacity for better visibility
+      linewidth: 1 // Reduced linewidth for better performance
+    });
+    
+    this.beamMaterial = new THREE.MeshBasicMaterial({
+      color: 0x00ffff,
+      transparent: true,
+      opacity: 0.7, // Increased opacity for better visibility
+      side: THREE.DoubleSide,
+      depthWrite: false // Improve performance by disabling depth writes for transparent objects
+    });
+    if (initialSatellites) {
+      this.satellites = new Map(initialSatellites);
+    }
+    
+    // Default to performance mode for better initial performance
+    this.performanceMode = true;
+    
+    // Initialize constellation with proper orbital shells
+    this.initializeConstellation();
+  }
+  
+  public getObject(): THREE.Group {
+    return this.object;
+  }
+  
+  public getSatellite(id: string): Satellite | undefined {
+    return this.satellites.get(id);
+  }
+  
+  public getAllSatellites(): Satellite[] {
+    return Array.from(this.satellites.values());
+  }
+  
+  // Set visibility of satellites and connections
+  public setVisible(visible: boolean): void {
+    this.object.visible = visible;
+  }
+  
+  // Set performance mode to reduce detail and improve performance
+  public setPerformanceMode(enabled: boolean): void {
+    this.performanceMode = enabled;
+  }
+  
+  // Update a satellite's position by ID with optimized performance
+  public updateSatellitePositionById(id: string, position: THREE.Vector3): void {
+    const satellite = this.satellites.get(id);
+    if (!satellite) return;
+    
+    // Update satellite position
+    satellite.position.copy(position);
+    
+    // Update satellite mesh position
+    const mesh = this.satelliteMeshes.get(id);
+    if (mesh) {
+      mesh.position.copy(position);
+      
+      // Always keep satellites visible regardless of distance
+      mesh.visible = true;
+      
+      // Scale satellites based on distance for better visibility
+      const distanceFromOrigin = position.length();
+      const scale = Math.max(1.0, 5.0 - distanceFromOrigin / 5000);
+      mesh.scale.set(scale, scale, scale);
+    }
+    
+    // Update routing controller if enabled - but only 20% of the time for performance
+    if (this.showDynamicRouting && this.routingController && this.earth && Math.random() < 0.2) {
+      // Calculate lat/lon/alt for routing controller
+      const earthRadius = this.earth.getRadius();
+      const direction = position.clone().normalize();
+      const altitude = position.length() - earthRadius;
+      
+      // Convert from Cartesian to lat/lon
+      const latitude = Math.asin(direction.y) * (180 / Math.PI);
+      const longitude = Math.atan2(direction.z, direction.x) * (180 / Math.PI);
+      
+      // Update satellite position in routing controller
+      this.routingController.updateSatellitePosition(
+        id,
+        position,
+        latitude,
+        longitude,
+        altitude
+      );
+    }
+  }
+  
+  // Clear all connections for a satellite
+  public clearConnections(satelliteId: string): void {
+    // Remove from visual connections
+    const keysToRemove: string[] = [];
+    
+    this.connectionLines.forEach((line, key) => {
+      // Check if this connection involves the satellite
+      if (key.includes(satelliteId)) {
+        // Remove the line from the scene
+        this.object.remove(line);
+        keysToRemove.push(key);
+      }
+    });
+    
+    // Remove from map
+    keysToRemove.forEach(key => {
+      this.connectionLines.delete(key);
+    });
+  }
+  
+  // Add a connection between two satellites
+  public addConnection(fromId: string, toId: string): void {
+    // Create visual connection line
+    this.createConnectionLine(fromId, toId);
+    
+    // Update routing if enabled
+    if (this.showDynamicRouting && this.routingController) {
+      this.routingController.addConnection(
+        fromId,
+        toId,
+        'satellite-to-satellite'
+      );
+    }
+  }
+  
+  // Initialize Earth reference for ground station targeting
+  public setEarth(earth: Earth): void {
+    this.earth = earth;
+    
+    // Initialize denied regions and routing controller
+    if (earth && earth.getRadius) {
+      this.deniedRegion = new DeniedRegion(earth.getRadius());
+      this.routingController = new DynamicRoutingController(earth.getRadius());
+      this.object.add(this.deniedRegion.getObject());
+      this.object.add(this.routingController.getObject());
+    }
+  }
+  
+  // Enable dynamic routing visualization
+  public enableDynamicRouting(enable: boolean = true): void {
+    this.showDynamicRouting = enable;
+    
+    if (enable && this.routingController) {
+      // Initialize with current satellites and ground stations
+      this.initializeRoutingController();
+    }
+  }
+  
+  // Add a denied region for routing simulation
+  public addDeniedRegion(regionName: string): void {
+    if (!this.deniedRegion || !this.routingController) return;
+    
+    // Add to active regions
+    if (!this.activeDeniedRegions.includes(regionName)) {
+      this.activeDeniedRegions.push(regionName);
+    }
+    
+    // Add to visualization
+    this.deniedRegion.addPredefinedRegion(regionName);
+    
+    // Re-initialize routing controller with denied regions
+    if (this.showDynamicRouting) {
+      this.routingController.initialize(this.activeDeniedRegions);
+    }
+  }
+  
+  // Initialize the routing controller with existing satellites and ground stations
+  private initializeRoutingController(): void {
+    if (!this.routingController || !this.earth) return;
+    
+    // Initialize with denied regions
+    this.routingController.initialize(this.activeDeniedRegions);
+    
+    // Add all satellites
+    this.satellites.forEach((satellite, id) => {
+      // Convert from Cartesian to lat/lon/alt
+      const position = satellite.position;
+      const earthRadius = this.earth!.getRadius();
+      
+      // Calculate latitude and longitude from Cartesian coordinates
+      const latitude = Math.asin(position.y / position.length()) * (180 / Math.PI);
+      const longitude = Math.atan2(position.z, position.x) * (180 / Math.PI);
+      const altitude = (position.length() - earthRadius) / 1000; // km
+      
+      this.routingController!.addSatellite(satellite, satellite.position, latitude, longitude, altitude);
+    });
+    
+    // Add all ground stations
+    this.groundStationPositions.forEach((position, id) => {
+      if (!this.earth || !this.routingController) return;
+      
+      const earthRadius = this.earth.getRadius();
+      
+      // Normalize position to get point on Earth's surface
+      const surfacePoint = position.clone().normalize().multiplyScalar(earthRadius);
+      
+      // Calculate latitude and longitude from Cartesian coordinates
+      const latitude = Math.asin(surfacePoint.y / earthRadius) * (180 / Math.PI);
+      const longitude = Math.atan2(surfacePoint.z, surfacePoint.x) * (180 / Math.PI);
+      
+      // Add ground station to routing controller
+      this.routingController.addGroundStation(id, position, latitude, longitude);
+    });
+  }
+  
+  public update(deltaTime: number): void {
+    // Update satellite positions and orientations
+    this.satellites.forEach((satellite, id) => {
+      // Update satellite position based on velocity
+      satellite.position.add(satellite.velocity.clone().multiplyScalar(deltaTime));
+      
+      // Update satellite mesh position
+      const mesh = this.satelliteMeshes.get(id);
+      if (mesh) {
+        mesh.position.copy(satellite.position);
+        // Orient satellite to face Earth center
+        mesh.lookAt(new THREE.Vector3(0, 0, 0));
+      }
+      
+      // Update satellite position in routing controller if enabled
+      if (this.showDynamicRouting && this.routingController && this.earth) {
+        const earthRadius = this.earth.getRadius();
+        const position = satellite.position;
+        
+        // Calculate latitude and longitude from Cartesian coordinates
+        const latitude = Math.asin(position.y / position.length()) * (180 / Math.PI);
+        const longitude = Math.atan2(position.z, position.x) * (180 / Math.PI);
+        const altitude = (position.length() - earthRadius) / 1000; // km
+        
+        // Update satellite position in routing controller
+        this.routingController.updateSatellitePosition(id, satellite.position, latitude, longitude, altitude);
+      }
+    });
+    
+    // Update connection lines - only every other frame in performance mode
+    if (!this.performanceMode || Math.floor(this.clock.getElapsedTime() * 2) % 2 === 0) {
+      this.updateConnectionLines();
+    }
+    
+    // Update routing connections if enabled - only every other frame in performance mode
+    if (this.showDynamicRouting && this.routingController) {
+      if (!this.performanceMode || Math.floor(this.clock.getElapsedTime() * 2) % 2 === 0) {
+        this.updateRoutingConnections();
+      }
+    }
+    
+    // Update active beams for each satellite - skip in performance mode
+    if (!this.performanceMode) {
+      // Only update a subset of satellites each frame to distribute the load
+      const satelliteArray = Array.from(this.satellites.entries());
+      const updateCount = Math.min(10, satelliteArray.length); // Update at most 10 satellites per frame
+      const startIndex = Math.floor(this.clock.getElapsedTime() * 5) % satelliteArray.length;
+      
+      for (let i = 0; i < updateCount; i++) {
+        const index = (startIndex + i) % satelliteArray.length;
+        const [id, satellite] = satelliteArray[index];
+        this.updateActiveBeams(satellite, id);
+      }
+    }
+    
+    // Rotate satellites slightly for visual effect - reduced rotation speed in performance mode
+    const rotationSpeed = this.performanceMode ? 0.1 : 0.2;
+    this.satelliteMeshes.forEach((mesh) => {
+      mesh.rotation.y += deltaTime * rotationSpeed;
+    });
+  }
+  
+  // Add a connection from a satellite to a ground station
+  public addGroundStationConnection(satelliteId: string, groundStationId: string, position: THREE.Vector3): void {
+    // Add ground station position
+    this.groundStationPositions.set(groundStationId, position);
+    
+    // Add connection to satellite
+    const satellite = this.satellites.get(satelliteId);
+    if (satellite && satellite.connections) {
+      if (!satellite.connections.groundStations.includes(groundStationId)) {
+        satellite.connections.groundStations.push(groundStationId);
+      }
+    }
+    
+    // Add to routing controller if enabled
+    if (this.showDynamicRouting && this.routingController && this.earth) {
+      const earthRadius = this.earth.getRadius();
+      
+      // Normalize position to get point on Earth's surface
+      const surfacePoint = position.clone().normalize().multiplyScalar(earthRadius);
+      
+      // Calculate latitude and longitude from Cartesian coordinates
+      const latitude = Math.asin(surfacePoint.y / earthRadius) * (180 / Math.PI);
+      const longitude = Math.atan2(surfacePoint.z, surfacePoint.x) * (180 / Math.PI);
+      
+      // Add ground station to routing controller if it doesn't exist
+      this.routingController.addGroundStation(groundStationId, position, latitude, longitude);
+      
+      // Add connection
+      this.routingController.addConnection(satelliteId, groundStationId, 'satellite-to-ground', 1);
+    }
+  }
+  
+  // Update connection lines between satellites
+  private updateConnectionLines(): void {
+    if (!this.showDynamicRouting || !this.routingController) return;
+
+    // Clear existing connection lines
+    this.connectionLines.forEach(line => {
+      this.object.remove(line);
+            }
+          }
+        });
+      }
+    });
+  }
+  
+  // Update routing connections for dynamic routing visualization
+  private updateRoutingConnections(): void {
+    if (this.routingController) {
+      // Update routing visualization based on current state
+      this.routingController.updateVisualization();
+    }
+  }
+  
+  // Update active beams for a satellite
+  private updateActiveBeams(satellite: Satellite, satelliteId: string): void {
+    // Get beam group for this satellite
+    const beamGroup = this.beamCones.get(satelliteId);
+    if (!beamGroup) return;
+    
+    // Get current active beam indices or initialize
+    const activeBeamIndices: number[] = [];
+    
+    // Get all beams in the group
+    const beams = [];
+    beamGroup.traverse(child => {
+      if (child instanceof THREE.Mesh) {
+        beams.push(child);
+      }
+    });
+    
+    // Reset all beams to invisible
+    beams.forEach(beam => {
+      beam.visible = false;
+    });
+    
+    // Activate a subset of beams for visual effect
+    const numActiveBeams = 2 + Math.floor(Math.random() * 3); // 2-4 active beams
+    
+    for (let i = 0; i < numActiveBeams; i++) {
+      // Select a random beam
+      const beamIndex = Math.floor(Math.random() * beams.length);
+      const beam = beams[beamIndex];
+      
+      // Skip if already active
+      if (activeBeamIndices.includes(beamIndex)) continue;
+      
+      // Set beam material properties
+      const beamMaterial = beam.material as THREE.MeshBasicMaterial;
+      beamMaterial.color.set(0x88ffff); // Light blue for scanning beams
+      
+      // Pulse the scanning beams
+      const pulseRate = 0.5 + (i * 0.2); // Different rates for each beam
+      const pulseFactor = 0.2 + 0.15 * Math.sin(this.clock.getElapsedTime() * pulseRate);
+      beamMaterial.opacity = pulseFactor;
+      
+      // Make beam visible
+      beam.visible = true;
+      
+      // Record this beam as active
+      activeBeamIndices.push(beamIndex);
+    }
+    
+    // Update active beams tracking
+    this.activeBeams.set(satelliteId, activeBeamIndices);
+  }
+  
+  // Initialize the Starlink constellation with optimized settings
+  public initializeConstellation(): void {
+    console.log('Initializing constellation...');
+    
+    // Define orbital shells for Starlink constellation
+    const shells = [
+      { altitude: 550, inclination: 53, planes: 72, satellitesPerPlane: 22 },
+      { altitude: 540, inclination: 53.2, planes: 72, satellitesPerPlane: 22 },
+      { altitude: 570, inclination: 70, planes: 36, satellitesPerPlane: 20 },
+      { altitude: 560, inclination: 97.6, planes: 6, satellitesPerPlane: 58 }
+    ];
+    
+    // Create satellites for each shell
+    let satelliteCount = 0;
+    
+    shells.forEach((shell, shellIndex) => {
+      const { altitude, inclination, planes, satellitesPerPlane } = shell;
+      
+      // Calculate orbit radius (Earth radius + altitude)
+      const earthRadius = 6371; // km
+      const orbitRadius = earthRadius + altitude;
+      
+      // Use larger scale factor for better visibility
+      const scaleFactor = 1/2; // Increased from 1/5 for better visibility
+      
+      // Create satellites for each orbital plane
+      for (let planeIndex = 0; planeIndex < planes; planeIndex++) {
+        // Calculate phase offset for this plane to distribute satellites
+        const planePhaseOffset = (planeIndex / planes) * 2 * Math.PI;
+        
+        // Create satellites in this plane
+        for (let satIndex = 0; satIndex < satellitesPerPlane; satIndex++) {
+          // Calculate position in orbital plane
+          const satPhaseOffset = (satIndex / satellitesPerPlane) * 2 * Math.PI;
+          const phase = planePhaseOffset + satPhaseOffset;
+          
+          // Calculate position in orbital plane
+          const x_plane = orbitRadius * Math.cos(phase);
+          const y_plane = orbitRadius * Math.sin(phase);
+          
+          // Convert to 3D coordinates with inclination
+          const inclinationRad = inclination * (Math.PI / 180);
+          const longitude = (planeIndex / planes) * 2 * Math.PI;
+          
+          // Calculate 3D position
+          const position = new THREE.Vector3(
+            x_plane * Math.cos(longitude) - y_plane * Math.sin(longitude) * Math.sin(inclinationRad),
+            y_plane * Math.cos(inclinationRad),
+            x_plane * Math.sin(longitude) + y_plane * Math.cos(longitude) * Math.sin(inclinationRad)
+          );
+          
+          // Scale position for visualization
+          position.multiplyScalar(scaleFactor);
+          
+          // Create satellite ID
+          const id = `sat-${shellIndex}-${planeIndex}-${satIndex}`;
+          
+          // Create satellite object
+          const satellite: Satellite = {
+            id,
+            position: position.clone(),
+            velocity: new THREE.Vector3(0, 0, 0),
+            connections: {
+              satellites: [],
+              groundStations: []
+            }
+          };
+          
+          // Add to satellites map
+          this.satellites.set(id, satellite);
+          
+          // Create satellite mesh
+          this.createSatelliteMesh(id, position, shellIndex);
+          
+          satelliteCount++;
+        }
+      }
+    });
+    
+    console.log(`Created ${satelliteCount} satellites in constellation`);
+    
+    // Setup inter-satellite links
+    this.setupInterSatelliteLinks();
+  }
+  
+  // Create a satellite mesh with improved visibility
+  private createSatelliteMesh(id: string, position: THREE.Vector3, shellIndex: number): void {
+    // Create larger satellite body for better visibility
+    const satelliteGeometry = new THREE.BoxGeometry(4, 0.8, 2);
+    const satelliteMaterial = new THREE.MeshBasicMaterial({
+      color: 0xFFFFFF, // Bright white for better visibility
+      transparent: false,
+      wireframe: false // Solid material for better visibility
+    });
+    
+    // Create larger solar panels for better visibility
+    const solarPanelGeometry = new THREE.BoxGeometry(5, 0.1, 1.5);
+    const solarPanelMaterial = new THREE.MeshBasicMaterial({
+      color: 0x00FFFF, // Bright cyan for better visibility
+      transparent: false,
+      wireframe: false // Solid material for better visibility
+    });
+    
+    // Create satellite group
+    const group = new THREE.Group();
+    
+    // Add satellite body
+    const satelliteBody = new THREE.Mesh(satelliteGeometry, satelliteMaterial);
+    group.add(satelliteBody);
+    
+    // Add solar panels
+    const leftPanel = new THREE.Mesh(solarPanelGeometry, solarPanelMaterial);
+    leftPanel.position.set(-3, 0, 0);
+    group.add(leftPanel);
+    
+    const rightPanel = new THREE.Mesh(solarPanelGeometry, solarPanelMaterial);
+    rightPanel.position.set(3, 0, 0);
+    group.add(rightPanel);
+    
+    // Position satellite
+    group.position.copy(position);
+    
+    // Add to scene and store reference
+    this.object.add(group);
+    this.satelliteMeshes.set(id, group);
+    
+    // Create beam cones for this satellite
+    this.createBeamCones(id, shellIndex);
+  }
+  
+  // Create beam cones for satellite scanning visualization
+  private createBeamCones(id: string, shellIndex: number): void {
+    // Create beam group
+    const beamGroup = new THREE.Group();
+    
+    // Create simplified cone geometry for performance
+    const coneGeometry = new THREE.ConeGeometry(0.5, 2, 8);
+    
+    // Create beam material with transparency
+    const beamMaterial = new THREE.MeshBasicMaterial({
+      color: 0x00ffff,
+      transparent: true,
+      opacity: 0.3,
+      side: THREE.DoubleSide
+    });
+    
+    // Create several beam cones pointing in different directions
+    const beamCount = 6;
+    for (let i = 0; i < beamCount; i++) {
+      const beam = new THREE.Mesh(coneGeometry, beamMaterial.clone());
+      
+      // Position cone to point outward
+      beam.position.set(0, -1, 0);
+      
+      // Rotate beam to point in different directions
+      beam.rotation.x = Math.PI;
+      beam.rotation.z = (i / beamCount) * Math.PI * 2;
+      
+      // Add to beam group
+      beamGroup.add(beam);
+      
+      // Initially hide all beams
+      beam.visible = false;
+    }
+    
+    // Add beam group to scene and store reference
+    this.object.add(beamGroup);
+    this.beamCones.set(id, beamGroup);
+  }
+}
+
+// Initialize the Starlink constellation with optimized settings
+public initializeConstellation(): void {
+  console.log('Initializing constellation...');
+  
+  // Create a single geometry and material for satellites (instancing for performance)
+  // Use larger geometries for better visibility
+  const satelliteGeometry = new THREE.BoxGeometry(10, 2, 5); // Increased size for visibility
+  const satelliteMaterial = new THREE.MeshBasicMaterial({
+    color: 0xFFFFFF, // White color for maximum visibility
+    transparent: false,
+    wireframe: false // Always solid for better visibility
+  });
+  
+  // Solar panel components - larger for visibility
+  const solarPanelGeometry = new THREE.BoxGeometry(12, 0.5, 4); // Increased size for visibility
+  const solarPanelMaterial = new THREE.MeshBasicMaterial({
+    color: 0x00FFFF, // Bright cyan for maximum visibility
+    transparent: false,
+    wireframe: false // Always solid for better visibility
+  });
+  
+  // Create a realistic Starlink constellation based on actual orbital shells but scaled down for performance
+  // Using parameters from SpaceX FCC filings and public data, but with reduced numbers
+  const shells = [
+    { altitude: 550, inclination: 53, planes: 8, satsPerPlane: 6, phase: 0 },   // Shell 1
+    { altitude: 540, inclination: 53.2, planes: 8, satsPerPlane: 6, phase: 0 }, // Shell 2
+    { altitude: 570, inclination: 70, planes: 6, satsPerPlane: 5, phase: 0 },   // Shell 3
+    { altitude: 560, inclination: 97.6, planes: 3, satsPerPlane: 8, phase: 0 },  // Shell 4
+    { altitude: 560, inclination: 97.6, planes: 2, satsPerPlane: 6, phase: 0 },  // Shell 5
+  ];
+  
+  // Scale factor for visualization (scale down the actual distances)
+  const scaleFactor = 1/2; // Increased scale factor to make satellites more visible
+  
+  // Create satellites for each shell
+  shells.forEach((shell, shellIndex) => {
+    const { altitude, inclination, planes, satsPerPlane, phase } = shell;
+    const inclinationRad = inclination * (Math.PI / 180); // convert to radians
+    
+    // For each orbital plane in this shell
+    for (let planeIndex = 0; planeIndex < planes; planeIndex++) {
+      // Calculate orbital plane angle (RAAN - Right Ascension of Ascending Node)
+      const longitude = (planeIndex / planes) * Math.PI * 2;
+      
+      // For each orbital plane in this shell
+      for (let planeIndex = 0; planeIndex < planes; planeIndex++) {
+        // Calculate orbital plane angle (RAAN - Right Ascension of Ascending Node)
+        const longitude = (planeIndex / planes) * Math.PI * 2;
+        
+        // For each satellite in this plane
+        for (let satIndex = 0; satIndex < satsPerPlane; satIndex++) {
+          // Calculate satellite position within plane with proper phasing
+          // This creates the proper spacing between satellites in the same plane
+          const positionInPlane = (satIndex / satsPerPlane) * Math.PI * 2 + phase;
+          
+          // Calculate 3D position using orbital parameters
+          const earthRadius = this.earth ? this.earth.getRadius() : 6371; // km
+          const orbitRadius = earthRadius + altitude;
+          
+          // Position in orbital plane
+          const x_plane = orbitRadius * Math.cos(positionInPlane);
+          const y_plane = orbitRadius * Math.sin(positionInPlane);
+          
+          // Rotate position based on inclination and longitude (RAAN)
+          // This places the satellite in the correct orbital plane
+          const position = new THREE.Vector3(
+            x_plane * Math.cos(longitude) - y_plane * Math.sin(longitude) * Math.sin(inclinationRad),
+            y_plane * Math.cos(inclinationRad),
+            x_plane * Math.sin(longitude) + y_plane * Math.cos(longitude) * Math.sin(inclinationRad)
+          );
+          
+          // Scale for visualization
+          position.multiplyScalar(scaleFactor);
+          
+          // Using simplified circular orbit velocity formula: v = sqrt(GM/r)
+          const GM = 3.986e14; // Earth's gravitational parameter (m^3/s^2)
+          const radius = (earthRadius + altitude) * 1000; // Convert to meters
+          const orbitalVelocity = Math.sqrt(GM / radius); // m/s
+          
+          // Calculate velocity vector (tangent to orbit)
+          const velocityDirection = new THREE.Vector3(
+            -Math.sin(positionInPlane) * Math.cos(longitude) - Math.cos(positionInPlane) * Math.sin(longitude) * Math.sin(inclinationRad),
+            -Math.cos(positionInPlane) * Math.cos(inclinationRad),
+            -Math.sin(positionInPlane) * Math.sin(longitude) + Math.cos(positionInPlane) * Math.cos(longitude) * Math.sin(inclinationRad)
+          ).normalize();
+          
+          const velocity = velocityDirection.multiplyScalar(orbitalVelocity * scaleFactor * 0.00001);
+          
+          // Create satellite data structure with proper orbital parameters
+          const id = `sat_${shellIndex}_${planeIndex}_${satIndex}`;
+          const satellite: Satellite = {
+            id,
+            position,
+            velocity,
+            orbitalParameters: {
+              altitude: altitude,
+              inclination: inclination,
+              eccentricity: 0,
+              argumentOfPeriapsis: 0,
+              longitudeOfAscendingNode: longitude * (180 / Math.PI),
+              meanAnomaly: positionInPlane * (180 / Math.PI)
+            },
+            connections: {
+              satellites: [],
+              groundStations: []
+            },
+            beams: shellIndex < 2 ? 8 : 16, // Newer shells have more beams
+            timeSlots: [],
+            status: 'active',
+            type: shellIndex < 2 ? 'v1.0' : 'v1.5'
+          };
+          
+          // Add to satellites collection
+          this.satellites.set(id, satellite);
+          
+          // Generate satellite mesh with proper size and appearance - simplified for performance
+          const group = new THREE.Group();
+          
+          // Central bus with no shadows for performance
+          const bus = new THREE.Mesh(satelliteGeometry, satelliteMaterial);
+          bus.castShadow = false;
+          bus.receiveShadow = false;
+          group.add(bus);
+          
+          // Always add simplified solar panels for visibility
+          // Solar panels
+          const leftPanel = new THREE.Mesh(solarPanelGeometry, solarPanelMaterial);
+          leftPanel.position.set(-5, 0, 0);
+          leftPanel.castShadow = false;
+          leftPanel.receiveShadow = false;
+          group.add(leftPanel);
+          
+          const rightPanel = new THREE.Mesh(solarPanelGeometry, solarPanelMaterial);
+          rightPanel.position.set(5, 0, 0);
+          rightPanel.castShadow = false;
+          rightPanel.receiveShadow = false;
+          group.add(rightPanel);
+          
+          // Always add the satellite to the scene with good visibility
+          // Add to scene
+          this.object.add(group);
+          this.satelliteMeshes.set(id, group);
+          
+          // Add additional details for non-performance mode
+          if (!this.performanceMode) {
+            // Add laser interlink antennas for newer shells (v1.5 and above)
+            const laserGeometry = new THREE.CylinderGeometry(0.003, 0.003, 0.015, 8, 1, false, 0, Math.PI * 2);
+            const laserMaterial = new THREE.MeshPhongMaterial({ color: 0xaaaaaa });
+            
+            // Front laser terminal
+            const frontLaser = new THREE.Mesh(laserGeometry, laserMaterial);
+            frontLaser.position.set(0, 0, 0.03);
+            frontLaser.rotation.set(Math.PI/2, 0, 0);
+            group.add(frontLaser);
+            
+            // Back laser terminal
+            const backLaser = new THREE.Mesh(laserGeometry, laserMaterial);
+            backLaser.position.set(0, 0, -0.03);
+            backLaser.rotation.set(Math.PI/2, 0, 0);
+            group.add(backLaser);
+            
+            // Left laser terminal
+            const leftLaser = new THREE.Mesh(laserGeometry, laserMaterial);
+            leftLaser.position.set(-0.03, 0, 0);
+            leftLaser.rotation.set(0, 0, Math.PI/2);
+            group.add(leftLaser);
+            
+            // Right laser terminal
+            const rightLaser = new THREE.Mesh(laserGeometry, laserMaterial);
+            rightLaser.position.set(0.03, 0, 0);
+            rightLaser.rotation.set(0, 0, Math.PI/2);
+            group.add(rightLaser);
+            
+            // Add to scene
+            this.object.add(group);
+            this.satelliteMeshes.set(id, group);
+          }
+          
+          // Create beam cones for this satellite
+          const beamGroup = new THREE.Group();
+          
+          // Create beam cones based on satellite type
+          for (let i = 0; i < satellite.beams; i++) {
+            // Create beam cone geometry - simplified for performance
+            const beamLength = 0.3;
+            const baseRadius = 0.01;
+            const topRadius = 0.12;
+            // Reduce segment count for better performance
+            const beamGeometry = new THREE.CylinderGeometry(topRadius, baseRadius, beamLength, 8, 1, true, 0, Math.PI * 2);
+            
+            // Position the beam's base at the origin and point down
+            beamGeometry.translate(0, -beamLength/2, 0);
+            beamGeometry.rotateX(Math.PI); // Point toward -Y
+            
+            // Create beam mesh with custom material
+            const beamMaterial = this.beamMaterial.clone();
+            const beam = new THREE.Mesh(beamGeometry, beamMaterial);
+            beam.visible = false; // Initially invisible
+            
+            // Add to beam group
+            beamGroup.add(beam);
+          }
+          
+          // Add beam group to satellite mesh
+          group.add(beamGroup);
+          this.beamCones.set(id, beamGroup);
+          this.activeBeams.set(id, []);
+        }
+      }
+    });
+    
+    // Setup inter-satellite laser links within the same plane and between adjacent planes
+    this.setupInterSatelliteLinks();
+  }
+  
+  // Setup inter-satellite laser links
+  private setupInterSatelliteLinks(): void {
+    // Group satellites by shell and plane for easier connection setup
+    const satellitesByShellAndPlane: Map<string, string[]> = new Map();
+    
+    // Organize satellites by shell and plane
+    this.satellites.forEach((satellite, id) => {
+      const [_, shellStr, planeStr] = id.split('_');
+      const key = `${shellStr}_${planeStr}`;
+      
+      if (!satellitesByShellAndPlane.has(key)) {
+        satellitesByShellAndPlane.set(key, []);
+      }
+      
+      satellitesByShellAndPlane.get(key)!.push(id);
+    });
+    
+    // Connect satellites within the same plane (intra-plane links)
+    satellitesByShellAndPlane.forEach((satIds, key) => {
+      const [shellStr, planeStr] = key.split('_');
+      const shellIndex = parseInt(shellStr);
+      
+      // Only shells 2 and above have laser links
+      if (shellIndex >= 2) {
+        // Sort satellites by position in plane
+        satIds.sort((a, b) => {
+          const satA = this.satellites.get(a)!;
+          const satB = this.satellites.get(b)!;
+          
+          const posA = satA.orbitalParameters.meanAnomaly;
+          const posB = satB.orbitalParameters.meanAnomaly;
+          
+          return posA - posB;
+        });
+        
+        // Connect each satellite to the next one in the plane
+        for (let i = 0; i < satIds.length; i++) {
+          const currentId = satIds[i];
+          const nextId = satIds[(i + 1) % satIds.length];
+          
+          const currentSat = this.satellites.get(currentId)!;
+          
+          // Add connection to satellite data
+          if (!currentSat.connections.satellites.includes(nextId)) {
+            currentSat.connections.satellites.push(nextId);
+          }
+          
+          // Create visual connection line
+          this.createConnectionLine(currentId, nextId);
+        }
+      }
+    });
+    
+    // Connect satellites between adjacent planes (inter-plane links)
+    // Only for shells with laser links (2 and above)
+    const planes = new Map<number, string[]>();
+    
+    // Group planes by shell
+    satellitesByShellAndPlane.forEach((_, key) => {
+      const [shellStr, planeStr] = key.split('_');
+      const shellIndex = parseInt(shellStr);
+      const planeIndex = parseInt(planeStr);
+      
+      if (shellIndex >= 2) {
+        if (!planes.has(shellIndex)) {
+          planes.set(shellIndex, []);
+        }
+        
+        planes.get(shellIndex)!.push(planeStr);
+      }
+    });
+    
+    // For each shell, connect satellites in adjacent planes
+    planes.forEach((planeList, shellIndex) => {
+      // Sort planes numerically
+      planeList.sort((a, b) => parseInt(a) - parseInt(b));
+      
+      for (let i = 0; i < planeList.length; i++) {
+        const currentPlane = planeList[i];
+        const nextPlane = planeList[(i + 1) % planeList.length];
+        
+        const currentKey = `${shellIndex}_${currentPlane}`;
+        const nextKey = `${shellIndex}_${nextPlane}`;
+        
+        const currentSatellites = satellitesByShellAndPlane.get(currentKey) || [];
+        const nextSatellites = satellitesByShellAndPlane.get(nextKey) || [];
+        
+        // Connect corresponding satellites in adjacent planes
+        for (let j = 0; j < Math.min(currentSatellites.length, nextSatellites.length); j++) {
+          const currentId = currentSatellites[j];
+          const nextId = nextSatellites[j];
+          
+          const currentSat = this.satellites.get(currentId)!;
+          
+          // Add connection to satellite data
+          if (!currentSat.connections.satellites.includes(nextId)) {
+            currentSat.connections.satellites.push(nextId);
+          }
+          
+          // Create visual connection line
+          this.createConnectionLine(currentId, nextId);
+        }
+      }
+    });
+  }
+  
+  // Create a visual connection line between two satellites
+  private createConnectionLine(fromId: string, toId: string): void {
+    const fromSat = this.satellites.get(fromId);
+    const toSat = this.satellites.get(toId);
+    
+    if (!fromSat || !toSat) return;
+    
+    // Create line geometry
+    const geometry = new THREE.BufferGeometry().setFromPoints([
+      fromSat.position,
+      toSat.position
+    ]);
+    
+    // Create line - use the same material instance for better performance
+    const line = new THREE.Line(geometry, this.connectionMaterial);
+    
+    // Add to scene
+    this.object.add(line);
+    
+    // Store for later updates
+    const connectionId = `${fromId}_${toId}`;
+    this.connectionLines.set(connectionId, line);
+  }
+  
+  // Update all connection lines between satellites
+  private updateConnectionLines(): void {
+    // Only update a subset of connections each frame for better performance
+    const maxUpdatesPerFrame = 50;
+    let updateCount = 0;
+    
+    for (const [connectionId, line] of this.connectionLines.entries()) {
+      // Limit updates per frame
+      if (updateCount >= maxUpdatesPerFrame) break;
+      
+      const [fromId, toId] = connectionId.split('_');
+      const fromSat = this.satellites.get(fromId);
+      const toSat = this.satellites.get(toId);
+      
+      if (fromSat && toSat) {
+        // Update line geometry
+        const positions = new Float32Array([
+          fromSat.position.x, fromSat.position.y, fromSat.position.z,
+          toSat.position.x, toSat.position.y, toSat.position.z
+        ]);
+        
+        // Update buffer geometry
+        const geometry = line.geometry as THREE.BufferGeometry;
+        // Replace the position attribute with a new one
+        geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometry.attributes.position.needsUpdate = true;
+        
+        updateCount++;
+      }
+    }
+  }
+  
+  // Update routing connections for dynamic routing
+  private updateRoutingConnections(): void {
+    if (!this.routingController) return;
+    
+    // Update satellite-to-satellite connections
+    this.satellites.forEach((satellite, id) => {
+      if (satellite.connections.satellites.length > 0) {
+        // For each connected satellite
+        satellite.connections.satellites.forEach(connectedId => {
+          // Add connection to routing controller
+          this.routingController!.addConnection(id, connectedId, 'satellite-to-satellite', 1);
+        });
+      }
+      
+      // Update satellite-to-ground station connections
+      if (satellite.connections.groundStations.length > 0) {
+        // For each connected ground station
+        satellite.connections.groundStations.forEach(stationId => {
+          // Add connection to routing controller
+          this.routingController!.addConnection(id, stationId, 'satellite-to-ground', 1);
+        });
+      }
+    });
+  }
+  
+  // Update active beams for a satellite
+  private updateActiveBeams(satellite: Satellite, satelliteId: string): void {
+    const beamGroup = this.beamCones.get(satelliteId);
+    if (!beamGroup) return;
+    
+    // Reset active beams tracking
+    const activeBeamIndices: number[] = [];
+    
+    // Hide all beams first
+    for (let i = 0; i < beamGroup.children.length; i++) {
+      const beam = beamGroup.children[i] as THREE.Mesh;
+      beam.visible = false;
+    }
+    
+    // Track how many beams we've used
+    let beamIndex = 0;
+    
+    // First, activate beams for ground station connections
+    const connectedGroundStations = satellite.connections.groundStations || [];
+    const connectedSatellites = satellite.connections.satellites || [];
+    
+    // Direction to Earth center for reference
+    const earthDirection = new THREE.Vector3(0, -1, 0);
+    
+    connectedGroundStations.forEach(stationId => {
+      if (beamIndex >= satellite.beams) return;
+      
+      // Get ground station position
+      const stationPosition = this.groundStationPositions.get(stationId);
+      if (!stationPosition) return;
+      
+      // Get beam mesh
+      const beam = beamGroup.children[beamIndex] as THREE.Mesh;
+      if (!beam) return;
+      
+      // Calculate direction from satellite to ground station
+      const direction = new THREE.Vector3().copy(stationPosition).sub(satellite.position).normalize();
+      
+      // Orient beam to point at ground station
+      this.orientBeamToTarget(beam, direction);
+      
+      // Calculate signal strength based on distance and angle
+      const distance = satellite.position.distanceTo(stationPosition);
+      const angle = direction.angleTo(earthDirection);
+      
+      // Signal strength decreases with distance and angle from nadir
+      const distanceFactor = Math.max(0, 1 - distance / 2.5);
+      const angleFactor = Math.max(0, 1 - angle / (Math.PI / 2));
+      const signalStrength = distanceFactor * angleFactor;
+      
+      // Set material properties based on signal strength
+      const beamMaterial = beam.material as THREE.MeshBasicMaterial;
+      beamMaterial.color.set(0x00ff00); // Green for ground station links
+      beamMaterial.opacity = 0.2 + (signalStrength * 0.6);
+      
+      // Make beam visible
+      beam.visible = true;
+      
+      // Record this beam as active
+      activeBeamIndices.push(beamIndex);
+      
+      // Move to next beam
+      beamIndex++;
+    });
+    
+    // Then, activate beams for satellite-to-satellite connections
+    connectedSatellites.forEach(satId => {
+      if (beamIndex >= satellite.beams) return;
+      
+      // Get connected satellite
+      const connectedSatellite = this.satellites.get(satId);
+      if (!connectedSatellite) return;
+      
+      // Get beam mesh
+      const beam = beamGroup.children[beamIndex] as THREE.Mesh;
+      if (!beam) return;
+      
+      // Calculate direction from this satellite to connected satellite
+      const satDirection = new THREE.Vector3().copy(connectedSatellite.position).sub(satellite.position).normalize();
+      
+      // Orient beam to point at other satellite
+      this.orientBeamToTarget(beam, satDirection);
+      
+      // Set material properties for inter-satellite link
+      const beamMaterial = beam.material as THREE.MeshBasicMaterial;
+      beamMaterial.color.set(0xff8800); // Orange for satellite-to-satellite links
+      beamMaterial.opacity = 0.5;
+      
+      // Make beam visible
+      beam.visible = true;
+      
+      // Record this beam as active
+      activeBeamIndices.push(beamIndex);
+      
+      // Move to next beam
+      beamIndex++;
+    });
+    
+    // If we have extra beam capacity, point some beams toward Earth
+    // for potential future connections (scanning beams)
+    const numScanningBeams = Math.min(
+      Math.floor(satellite.beams * 0.3), // Use up to 30% of beams for scanning
+      satellite.beams - beamIndex // But only use remaining beam capacity
+    );
+    
+    for (let i = 0; i < numScanningBeams; i++) {
+      if (beamIndex >= satellite.beams) break;
+      
+      // Get beam mesh
+      const beam = beamGroup.children[beamIndex] as THREE.Mesh;
+      if (!beam) continue;
+      
+      // For scanning beams, use a slight offset from Earth center
+      // This creates a scanning pattern looking for new ground stations
+      const scanAngle = (this.clock.getElapsedTime() * 0.1) + ((2 * Math.PI * i) / numScanningBeams);
+      const scanOffsetX = Math.sin(scanAngle) * 0.2;
+      const scanOffsetZ = Math.cos(scanAngle) * 0.2;
+      
+      const scanDirection = new THREE.Vector3(
+        earthDirection.x + scanOffsetX,
+        earthDirection.y - 0.05, // Slight downward tilt
+        earthDirection.z + scanOffsetZ
+      ).normalize();
+      
+      // Orient beam for scanning
+      this.orientBeamToTarget(beam, scanDirection);
+      
+      // Set material properties for scanning beam
+      const beamMaterial = beam.material as THREE.MeshBasicMaterial;
+      beamMaterial.color.set(0x88ffff); // Light blue for scanning beams
+      
+      // Pulse the scanning beams
+      const pulseRate = 0.5 + (i * 0.2); // Different rates for each beam
+      const pulseFactor = 0.2 + 0.15 * Math.sin(this.clock.getElapsedTime() * pulseRate);
+      beamMaterial.opacity = pulseFactor;
+      
+      // Make beam visible
+      beam.visible = true;
+      
+      // Record this beam as active
+      activeBeamIndices.push(beamIndex);
+      
+      // Move to next beam
+      beamIndex++;
+    }
+    
+    // Update active beams tracking
+    this.activeBeams.set(satelliteId, activeBeamIndices);
+  }
+  
+  // Helper method to orient a beam toward a specific target direction
+  private orientBeamToTarget(beam: THREE.Mesh, targetDirection: THREE.Vector3): void {
+    // Clone the direction to avoid modifying the original
+    const direction = targetDirection.clone();
+    
+    // Create a rotation that points the beam's Z-axis along the target direction
+    const upVector = new THREE.Vector3(0, 1, 0);
+    
+    // Handle the case where direction is parallel to up vector
+    if (Math.abs(direction.y) > 0.99) {
+      upVector.set(1, 0, 0);
+    }
+    
+    // Create quaternion to rotate toward target
+    const quaternion = new THREE.Quaternion();
+    const fromDirection = new THREE.Vector3(0, -1, 0); // Default beam direction
+    quaternion.setFromUnitVectors(fromDirection, direction);
+    
+    // Apply rotation
+    beam.quaternion.copy(quaternion);
+    
+    // Ensure beam is still anchored at satellite
+    beam.position.set(0, 0, 0);
+  }
+  
+  // Dispose of all resources
+  public dispose(): void {
+    // Dispose of satellite meshes
+    this.satelliteMeshes.forEach((mesh) => {
+      if (mesh instanceof THREE.Mesh) {
+        if (mesh.geometry) mesh.geometry.dispose();
+        if (mesh.material) {
+          if (Array.isArray(mesh.material)) {
+            mesh.material.forEach(material => material.dispose());
+          } else {
+            mesh.material.dispose();
+          }
+        }
+      } else if (mesh instanceof THREE.Group) {
+        // Handle satellite groups
+        mesh.traverse((child) => {
+          if (child instanceof THREE.Mesh) {
+            if (child.geometry) child.geometry.dispose();
+            if (child.material) {
+              if (Array.isArray(child.material)) {
+                child.material.forEach(material => material.dispose());
+              } else {
+                child.material.dispose();
+              }
+            }
+          }
+        });
+      }
+      
+      // Remove from parent
+      this.object.remove(mesh);
+    });
+    
+    // Dispose of beam cones
+    this.beamCones.forEach((beamGroup) => {
+      beamGroup.traverse((child) => {
+        if (child instanceof THREE.Mesh) {
+          if (child.geometry) child.geometry.dispose();
+          if (child.material) {
+            if (Array.isArray(child.material)) {
+              child.material.forEach(material => material.dispose());
+            } else {
+              child.material.dispose();
+            }
+          }
+        }
+      });
+      
+      this.object.remove(beamGroup);
+    });
+    
+    // Dispose of connection lines
+    this.connectionLines.forEach((line) => {
+      if (line.geometry) line.geometry.dispose();
+      if (line.material) {
+        if (Array.isArray(line.material)) {
+          line.material.forEach(material => material.dispose());
+        } else {
+          line.material.dispose();
+        }
+      }
+      
+      this.object.remove(line);
+    });
+    
+    // Dispose of shared materials
+    if (this.beamMaterial) this.beamMaterial.dispose();
+    if (this.connectionMaterial) this.connectionMaterial.dispose();
+    
+    // Note: The routing controller will be disposed separately by VisualizationEngine
+    
+    // Clear all collections
+    this.satellites.clear();
+    this.satelliteMeshes.clear();
+    this.beamCones.clear();
+    this.connectionLines.clear();
+    this.activeBeams.clear();
+    this.groundStationPositions.clear();
+  }
+}
