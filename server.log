@@ -194,3 +194,7 @@ assets by status 3.52 MiB [cached] 1 asset
 asset index.html 772 bytes [emitted]
 cached modules 3.14 MiB (javascript) 27.7 KiB (runtime) [cached] 102 modules
 webpack 5.99.5 compiled successfully in 24 ms
+assets by status 3.52 MiB [cached] 1 asset
+asset index.html 772 bytes [emitted]
+cached modules 3.14 MiB (javascript) 27.7 KiB (runtime) [cached] 102 modules
+webpack 5.99.5 compiled successfully in 46 ms
