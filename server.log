@@ -198,3 +198,105 @@ assets by status 3.52 MiB [cached] 1 asset
 asset index.html 772 bytes [emitted]
 cached modules 3.14 MiB (javascript) 27.7 KiB (runtime) [cached] 102 modules
 webpack 5.99.5 compiled successfully in 46 ms
+assets by status 772 bytes [cached] 1 asset
+assets by path *.js 3.53 MiB
+  asset bundle.js 3.52 MiB [emitted] [big] (name: main)
+  asset main.935fd12612f66d8950ea.hot-update.js 9.96 KiB [emitted] [immutable] [hmr] (name: main)
+asset main.935fd12612f66d8950ea.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+Entrypoint main [big] 3.53 MiB = bundle.js 3.52 MiB main.935fd12612f66d8950ea.hot-update.js 9.96 KiB
+cached modules 3.03 MiB [cached] 83 modules
+runtime modules 27.7 KiB 14 modules
+javascript modules 119 KiB
+  ./src/visualization/VisualizationEngine.ts 44.6 KiB [built] [code generated]
+  ./src/visualization/Earth.ts 7.8 KiB [built] [code generated]
+  ./src/visualization/SatelliteManager.ts 38 KiB [built] [code generated]
+  ./src/visualization/GroundStationManager.ts 9.18 KiB [built] [code generated]
+  ./src/visualization/GroundStationView.ts 19.4 KiB [built] [code generated]
+webpack 5.99.5 compiled successfully in 524 ms
+assets by status 772 bytes [cached] 1 asset
+assets by path *.js 3.52 MiB
+  asset bundle.js 3.52 MiB [emitted] [big] (name: main)
+  asset main.c87ac43fdec67de6353f.hot-update.js 5.91 KiB [emitted] [immutable] [hmr] (name: main)
+asset main.c87ac43fdec67de6353f.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+Entrypoint main [big] 3.52 MiB = bundle.js 3.52 MiB main.c87ac43fdec67de6353f.hot-update.js 5.91 KiB
+cached modules 3.14 MiB [cached] 87 modules
+runtime modules 27.7 KiB 14 modules
+./node_modules/css-loader/dist/cjs.js!./src/App.css 3.34 KiB [built] [code generated]
+webpack 5.99.5 compiled successfully in 57 ms
+assets by status 772 bytes [cached] 1 asset
+assets by path *.js 3.52 MiB
+  asset bundle.js 3.52 MiB [emitted] [big] (name: main)
+  asset main.161509d5f0891d2211b0.hot-update.js 6.85 KiB [emitted] [immutable] [hmr] (name: main)
+asset main.161509d5f0891d2211b0.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+Entrypoint main [big] 3.52 MiB = bundle.js 3.52 MiB main.161509d5f0891d2211b0.hot-update.js 6.85 KiB
+cached modules 3.14 MiB [cached] 87 modules
+runtime modules 27.7 KiB 14 modules
+./node_modules/css-loader/dist/cjs.js!./src/App.css 4.23 KiB [built] [code generated]
+webpack 5.99.5 compiled successfully in 45 ms
+assets by path *.js 3.52 MiB
+  asset bundle.js 3.52 MiB [emitted] [big] (name: main)
+  asset main.53d7aafa06a277e50490.hot-update.js 869 bytes [emitted] [immutable] [hmr] (name: main)
+asset index.html 918 bytes [emitted]
+asset main.53d7aafa06a277e50490.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+Entrypoint main [big] 3.52 MiB = bundle.js 3.52 MiB main.53d7aafa06a277e50490.hot-update.js 869 bytes
+cached modules 3.14 MiB [cached] 88 modules
+runtime modules 27.7 KiB 14 modules
+webpack 5.99.5 compiled successfully in 49 ms
+assets by status 918 bytes [cached] 1 asset
+assets by info 14.1 MiB [immutable]
+  assets by status 14.1 MiB [big]
+    asset 08fcd80007fae8fc7170.jpg 11.1 MiB [emitted] [immutable] [from: src/assets/8k_earth_clouds.jpg] [hmr] [big] (name: main) (auxiliary name: main)
+    asset c0e138e9bf380cafd2c2.jpg 3 MiB [emitted] [immutable] [from: src/assets/8k_earth_nightmap.jpg] [hmr] [big] (name: main) (auxiliary name: main)
+  asset main.0310d850b6d0e98873cf.hot-update.js 11.3 KiB [emitted] [immutable] [hmr] (name: main)
+  asset main.0310d850b6d0e98873cf.hot-update.json 28 bytes [emitted] [immutable] [hmr]
+asset bundle.js 3.52 MiB [emitted] [big] (name: main)
+Entrypoint main [big] 17.6 MiB (14.1 MiB) = bundle.js 3.52 MiB main.0310d850b6d0e98873cf.hot-update.js 11.3 KiB 08fcd80007fae8fc7170.jpg 11.1 MiB c0e138e9bf380cafd2c2.jpg 3 MiB 2 auxiliary assets
+cached modules 3.03 MiB [cached] 83 modules
+runtime modules 27.7 KiB 14 modules
+modules by layer 119 KiB (javascript) 14.1 MiB (asset)
+  javascript modules 119 KiB
+    ./src/visualization/VisualizationEngine.ts 44.6 KiB [built] [code generated]
+    ./src/visualization/Earth.ts 7.95 KiB [built] [code generated] [2 errors]
+    ./src/visualization/SatelliteManager.ts 38 KiB [built] [code generated]
+    ./src/visualization/GroundStationManager.ts 9.18 KiB [built] [code generated]
+    ./src/visualization/GroundStationView.ts 19.4 KiB [built] [code generated]
+  asset modules 14.1 MiB (asset) 84 bytes (javascript)
+    ./src/assets/8k_earth_nightmap.jpg 3 MiB (asset) 42 bytes (javascript) [built] [code generated]
+    ./src/assets/8k_earth_clouds.jpg 11.1 MiB (asset) 42 bytes (javascript) [built] [code generated]
+
+ERROR in /Users/omeedtehrani/SpaceX Presentation Day/satellite-simulator/src/visualization/Earth.ts
+./src/visualization/Earth.ts 3:30-63
+[tsl] ERROR in /Users/omeedtehrani/SpaceX Presentation Day/satellite-simulator/src/visualization/Earth.ts(3,31)
+      TS2307: Cannot find module '../assets/8k_earth_nightmap.jpg' or its corresponding type declarations.
+ts-loader-default_e3b0c44298fc1c14
+ @ ./src/visualization/VisualizationEngine.ts 12:0-32 193:25-30
+ @ ./src/components/Simulation.tsx 4:0-75 22:30-49
+ @ ./src/App.tsx 2:0-53 12:32-42
+ @ ./src/index.tsx 3:0-24 6:24-27
+
+ERROR in /Users/omeedtehrani/SpaceX Presentation Day/satellite-simulator/src/visualization/Earth.ts
+./src/visualization/Earth.ts 4:25-56
+[tsl] ERROR in /Users/omeedtehrani/SpaceX Presentation Day/satellite-simulator/src/visualization/Earth.ts(4,26)
+      TS2307: Cannot find module '../assets/8k_earth_clouds.jpg' or its corresponding type declarations.
+ts-loader-default_e3b0c44298fc1c14
+ @ ./src/visualization/VisualizationEngine.ts 12:0-32 193:25-30
+ @ ./src/components/Simulation.tsx 4:0-75 22:30-49
+ @ ./src/App.tsx 2:0-53 12:32-42
+ @ ./src/index.tsx 3:0-24 6:24-27
+
+webpack 5.99.5 compiled with 2 errors in 684 ms
+assets by status 918 bytes [cached] 1 asset
+assets by path *.js 3.53 MiB
+  asset bundle.js 3.52 MiB [emitted] [big] (name: main)
+  asset main.baaafe224016a7f808b8.hot-update.js 10.2 KiB [emitted] [immutable] [hmr] (name: main)
+asset main.baaafe224016a7f808b8.hot-update.json 99 bytes [emitted] [immutable] [hmr]
+Entrypoint main [big] 3.53 MiB = bundle.js 3.52 MiB main.baaafe224016a7f808b8.hot-update.js 10.2 KiB
+cached modules 3.03 MiB [cached] 83 modules
+runtime modules 27.7 KiB 14 modules
+javascript modules 119 KiB
+  ./src/visualization/VisualizationEngine.ts 44.6 KiB [built] [code generated]
+  ./src/visualization/Earth.ts 8.04 KiB [built] [code generated]
+  ./src/visualization/SatelliteManager.ts 38 KiB [built] [code generated]
+  ./src/visualization/GroundStationManager.ts 9.18 KiB [built] [code generated]
+  ./src/visualization/GroundStationView.ts 19.4 KiB [built] [code generated]
+webpack 5.99.5 compiled successfully in 552 ms

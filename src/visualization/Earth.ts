@@ -14,6 +14,11 @@ export class Earth {
     // Create Earth geometry with sizing similar to reference implementation
     const earthGeometry = new THREE.SphereGeometry(this.radius, 64, 64);
     
+    // Base path for textures - handles both local development and GitHub Pages deployment
+    const basePath = window.location.href.includes('github.io') ? 
+      '/starlink-satellite-simulator/' : 
+      '/';
+    
     // Load Earth texture - using the night map for better visual impact
     const textureLoader = new THREE.TextureLoader();
     
@@ -21,7 +26,7 @@ export class Earth {
     
     // Load the night earth texture
     const earthTexture = textureLoader.load(
-      './src/assets/8k_earth_nightmap.jpg',
+      `${basePath}assets/8k_earth_nightmap.jpg`,
       (texture) => {
         console.log('Earth night texture loaded successfully');
         // Let the texture wrap properly
@@ -76,7 +81,7 @@ export class Earth {
     
     // Load cloud texture
     const cloudsTexture = textureLoader.load(
-      './src/assets/8k_earth_clouds.jpg',
+      `${basePath}assets/8k_earth_clouds.jpg`,
       (texture) => {
         console.log('Clouds texture loaded successfully');
         texture.wrapS = THREE.RepeatWrapping;
